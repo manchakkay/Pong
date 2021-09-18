@@ -63,7 +63,7 @@ function CollisionObject:checkCollision(obj)
 
             local dx = self.x - checkX
             local dy = self.y - checkY
-            local distance = love.math.sqrt((dx * dx) + (dy * dy))
+            local distance = math.sqrt((dx * dx) + (dy * dy))
 
             if (distance <= self.r) then return true end
             return false
