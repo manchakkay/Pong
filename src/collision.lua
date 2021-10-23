@@ -2,38 +2,38 @@ CollisionObject = {}
 CollisionObject.__index = CollisionObject
 
 --[[
-# Создание объекта коллизии
-# Типы объектов:
-#    "ball"
-        Параметры:
-            x, y, radius
-#    "rect"
-        Параметры:
-            x, y, width, height
+    Создание объекта коллизии
+    Типы объектов:
+        Название параметра: type
+
+        "ball"
+            Параметры:
+                startX, startY, radius
+        "rect"
+            Параметры:
+                startX, startY, width, height
  --]]
-function CollisionObject:create(type, ...)
+function CollisionObject:create( arguments )
 
     local prototype = {}
-    local arguments = {...}
 
     setmetatable(prototype, CollisionObject)
 
-    if (type == "ball") then
-        if (arguments[1] ~= nil and arguments[2] ~= nil and arguments[3] ~= nil) then
+    if (arguments.type == "ball") then
+        if (arguments.startX ~= nil and arguments.startY ~= nil and arguments.radius ~= nil) then
             prototype.type = "ball"
-            prototype.x = arguments[1]
-            prototype.y = arguments[2]
-            prototype.r = arguments[3]
+            prototype.x = arguments.startX
+            prototype.y = arguments.startY
+            prototype.r = arguments.radius
         end
 
-    elseif (type == "rect") then
-        if (arguments[1] ~= nil and arguments[2] ~= nil and arguments[3] ~= nil and
-            arguments[4] ~= nil) then
+    elseif (arguments.type == "rect") then
+        if (arguments.startX ~= nil and arguments.startY ~= nil and arguments.width ~= nil and arguments.height ~= nil) then
             prototype.type = "rect"
-            prototype.x = arguments[1]
-            prototype.y = arguments[2]
-            prototype.w = arguments[3]
-            prototype.h = arguments[4]
+            prototype.x = arguments.startX
+            prototype.y = arguments.startY
+            prototype.w = arguments.width
+            prototype.h = arguments.height
         end
 
     end
@@ -41,7 +41,7 @@ function CollisionObject:create(type, ...)
     return prototype
 end
 
-function CollisionObject:checkCollision(obj)
+function CollisionObject:checkCollision( obj )
     -- Если это шар
     if (self.type == "ball") then
         -- Соприкасается с прямоугольником
@@ -65,8 +65,11 @@ function CollisionObject:checkCollision(obj)
             local dy = self.y - checkY
             local distance = math.sqrt((dx * dx) + (dy * dy))
 
-            if (distance <= self.r) then return true end
-            return false
+            if (distance <= self.r) then
+                return true
+            end
         end
     end
+
+    return false
 end
