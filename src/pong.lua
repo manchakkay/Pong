@@ -82,7 +82,7 @@ function PongGame:nextRound(winner)
     self.ballObject.y = (windowHeight / 2) 
     -- Установка скоростей
     self.ballSpeed.x = self.config.ballStartSpeed * ( (love.math.random() > 0.5) and 1 or -1)
-    self.ballSpeed.y = self.config.ballStartSpeed * love.math.random()
+    self.ballSpeed.y = self.config.ballStartSpeed * (love.math.random() - 0.5) * 2
     self.ballSpeed.a = self.config.ballAcceleration
     
 end
@@ -150,7 +150,7 @@ function PongGame:move( dt, paddle, direction )
 end
 
 -- Триггер нажатия клавиши мыши
-function PongGame:mouseClick( x, y )
+function PongGame:mouseClick()
     if (self.gameMode == "menu") then
         -- -- -- РЕЖИМ МЕНЮ -- -- --
         
