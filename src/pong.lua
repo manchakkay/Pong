@@ -45,6 +45,11 @@ function PongGame:create( arguments )
 
     -- Скорости
     prototype.ballSpeed = {x, y, a}
+    prototype.ballGhost = {x, y}
+    prototype.paddleBusy = {
+        l = false, 
+        r = false
+    }
     prototype.paddleSpeed = prototype.config.paddleSpeed
 
     -- Настройки игры
@@ -63,9 +68,13 @@ function PongGame:nextRound(winner)
 
     -- Рассчёт очков и определение победителя
     if (winner == "L") then
-        self.scoreL = self.scoreL + 1
+        self.scoreL = self.scoreL + 1       
     elseif (winner == "R") then
         self.scoreR = self.scoreR + 1
+    end
+
+    if (self.scoreL >= 9 or self.scoreR >= 9) then
+        self.gameMode = "end-2P"
     end
 
     -- Установка координат
@@ -160,6 +169,35 @@ function PongGame:mouseClick( x, y )
             love.event.quit()
 
         end
+    elseif (self.gameMode == "end-2P") then
+        -- -- -- РЕЖИМ ОКОНЧАНИЮ ИГРЫ 1 на 1 -- -- --
+        
+        if (ui.mouseInsideRect(self.buttons["menu"])) then
+            -- Кнопка: Выход в меню
+
+            self.scoreL = 0
+            self.scoreR = 0
+            self.paddleLObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+            self.paddleRObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+
+            self:nextRound()
+
+            self.gameMode = "menu"
+
+        elseif (ui.mouseInsideRect(self.buttons["start2P"])) then
+            -- Кнопка: Рестарт
+
+            self.scoreL = 0
+            self.scoreR = 0
+            self.paddleLObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+            self.paddleRObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+
+            self:nextRound()
+
+            self.gameMode = "game-2P"
+
+            
+        end
     end
 end
 
@@ -189,13 +227,22 @@ function PongGame:draw()
         }
 
         -- Скорость игры (debug)
-        ui.centerText{
+        --[[ ui.centerText{
             rectX = windowWidth / 2, 
             rectY = 144, 
             text = math.floor(math.sqrt(math.pow(self.ballSpeed.x, 2) + math.pow(self.ballSpeed.y, 2))), 
             fontName = "REGULAR24", 
             colorName = "GRAY"
-        }
+        } ]]
+
+        -- Угол шара (debug)
+        --[[ ui.centerText{
+            rectX = windowWidth / 2, 
+            rectY = 216, 
+            text = math.floor(self:getBallDirection().angle), 
+            fontName = "REGULAR24", 
+            colorName = "GRAY"
+        } ]]
 
     elseif (self.gameMode == "menu") then
         -- -- -- РЕЖИМ МЕНЮ -- -- --
@@ -205,7 +252,7 @@ function PongGame:draw()
             rectX = windowWidth / 2, 
             rectY = windowHeight / 2 - 128, 
             text = "P O N G", 
-            fontName = "LIGHT160", 
+            fontName = "BOLD160", 
             colorName = "ACCENT"
         }
 
@@ -295,6 +342,96 @@ function PongGame:draw()
                 colorName = "WHITE"
             }
         end
+    elseif (self.gameMode == "end-2P") then
+        -- -- -- РЕЖИМ МЕНЮ -- -- --
+
+
+        -- Выводим победителя
+        local tempText
+
+        if (self.scoreL > self.scoreR) then
+            tempText = "PLAYER 1"
+        else
+            tempText = "PLAYER 2"
+        end
+
+        ui.centerText{
+            rectX = windowWidth / 2, 
+            rectY = windowHeight / 2 - 256, 
+            text = tempText .. " WINS!", 
+            fontName = "BOLD160", 
+            colorName = "ACCENT"
+        }
+
+        ui.centerText{
+            rectX = windowWidth / 2, 
+            rectY = windowHeight / 2 - 108, 
+            text = self.scoreL .. " : " .. self.scoreR, 
+            fontName = "EXTRABOLD48", 
+            colorName = "GRAY"
+        }
+
+        -- Получаем зоны для нажатия на кнопки
+
+        -- Рестарт
+        self.buttons["start2P"] = ui.centerTextRect{
+            rectX = windowWidth / 2, 
+            rectY = windowHeight / 2 + 88, 
+            text = "Начать новую игру", 
+            fontName = "BOLD24"
+        }
+        -- Выход в меню
+        self.buttons["menu"] = ui.centerTextRect{
+            rectX = windowWidth / 2, 
+            rectY = windowHeight / 2 + 164, 
+            text = "Выйти в главное меню", 
+            fontName = "BOLD24"
+        }
+
+
+        -- Анимация наведения курсора
+
+        -- Рестарт
+        if (ui.mouseInsideRect(self.buttons["start2P"])) then
+            ui.centerText{
+                rectX = windowWidth / 2, 
+                rectY = windowHeight / 2 + 88, 
+                text = "Начать новую игру", 
+                fontName = "BOLD24",
+                colorName = "GRAY"
+            }
+            ui.cursorRequired = true
+            ui.cursorMode = "hand"
+        else
+            ui.centerText{
+                rectX = windowWidth / 2, 
+                rectY = windowHeight / 2 + 88, 
+                text = "Начать новую игру", 
+                fontName = "BOLD24",
+                colorName = "WHITE"
+            }
+        end
+
+        -- Выход в меню
+        if (ui.mouseInsideRect(self.buttons["menu"])) then
+            ui.centerText{
+                rectX = windowWidth / 2, 
+                rectY = windowHeight / 2 + 164, 
+                text = "Выйти в главное меню", 
+                fontName = "BOLD24",
+                colorName = "GRAY"
+            }
+            ui.cursorRequired = true
+            ui.cursorMode = "hand"
+        else
+            ui.centerText{
+                rectX = windowWidth / 2, 
+                rectY = windowHeight / 2 + 164, 
+                text = "Выйти в главное меню", 
+                fontName = "BOLD24",
+                colorName = "WHITE"
+            }
+        end
     end
 end
 
@@ -367,39 +504,177 @@ end
 function PongGame:checkCollisions()
     -- Проверка столкновения мяча с игровыми курками
 
-    if (self.ballObject:checkCollision(self.paddleLObject)) then
+    local collisionL = self.ballObject:checkCollision(self.paddleLObject)
+    local collisionR = self.ballObject:checkCollision(self.paddleRObject)
 
-        local angle = (math.atan2( self.ballObject.y - (self.paddleLObject.y+(self.paddleLObject.h/2)), self.ballObject.x - (self.paddleLObject.x+(self.paddleLObject.w/2)) ) * 180) / math.pi
-        local speed = math.sqrt(math.pow(self.ballSpeed.x, 2) + math.pow(self.ballSpeed.y, 2))
+    if (self.paddleBusy.l == false and collisionL.success) then
 
-        print("L: " .. angle .. " -> " .. speed)
+        -- БЛОКИРОВКА КУРКА ДЛЯ МНОГОПОТОЧНОСТИ
+        self.paddleBusy.l = true
 
-        self.ballObject.x = self.ballObject.x - self.ballSpeed.x
-        self.ballObject.y = self.ballObject.y - self.ballSpeed.y
+        -- Рассчитываем угол мяча относительно курка и вектор движения
 
-        self.ballSpeed.x = lengthDir(speed, angle-90).x
-        self.ballSpeed.y = lengthDir(speed, angle-90).y
+        local ballPaddleAngle = math.atan2(
+            self.paddleLObject.y+(self.paddleLObject.h/2) - self.ballObject.y, 
+            self.paddleLObject.x+(self.paddleLObject.w/2) - self.ballObject.x) * (180.0 / math.pi)
 
-    elseif (self.ballObject:checkCollision(self.paddleRObject)) then
+        local ballMovement = self:getBallDirection()
 
-        local angle = (math.atan2( self.ballObject.y - (self.paddleRObject.y+(self.paddleRObject.h/2)), self.ballObject.x - (self.paddleRObject.x+(self.paddleRObject.w/2)) ) * 180) / math.pi
-        local speed = math.sqrt(math.pow(self.ballSpeed.x, 2) + math.pow(self.ballSpeed.y, 2))
+        print("[L]ANGLE START: " .. ballMovement.angle)
+        print("[L]ANGLE PADDLE: " .. ballPaddleAngle)
 
-        print("R: " .. angle .. " -> " .. speed)
+        -- Отодвигаем мяч от курка
+        self.ballObject.x = self.ballGhost.x
+        self.ballObject.y = self.ballGhost.y
 
-        self.ballObject.x = self.ballObject.x - self.ballSpeed.x
-        self.ballObject.y = self.ballObject.y - self.ballSpeed.y
+        -- Рассчитываем вектор отскока
+        if (collisionL.rectSide == "left" or collisionL.rectSide == "right") then
+            ballMovement = self:getBallDirection("x")
+        elseif (collisionL.rectSide == "top" or collisionL.rectSide == "bottom") then
+            ballMovement = self:getBallDirection("y")
+        end
+        
+        print("[L]ANGLE MIDDLE: " .. ballMovement.angle)
 
-        self.ballSpeed.x = lengthDir(speed, angle+90).x
-        self.ballSpeed.y = lengthDir(speed, angle+90).y
+        local changeAngle = -1 * (ballPaddleAngle/ballPaddleAngle) * (math.abs( ballPaddleAngle ) - 180);
+        local newAngle = (ballMovement.angle * (1-self.config.anglePower) + changeAngle * self.config.anglePower)
+        
+        print("[R]ANGLE CHANGE: " .. changeAngle)
+        if (newAngle < -90 and newAngle >= -180) then
+            newAngle = -80
+            print("[L]FIX-")
+        elseif (newAngle > 90 and newAngle <= 180) then
+            newAngle = 80
+            print("[L]FIX+")
+        end
+        -- Рассчитываем финальный вектор движения мяча
+        local newSpeed = lengthDir(ballMovement.speed, newAngle)
 
-    end
+        -- Устанавливаем скорость мяча после отскока
+        self.ballSpeed.x = newSpeed.x
+        self.ballSpeed.y = newSpeed.y
+
+        print("[L]ANGLE END: " .. newAngle)
+
+        -- РАЗБЛОКИРОВКА КУРКА ДЛЯ МНОГОПОТОЧНОСТИ
+        self.paddleBusy.l = false
+
+    elseif (self.paddleBusy.r == false and collisionR.success) then
+
+        -- БЛОКИРОВКА КУРКА ДЛЯ МНОГОПОТОЧНОСТИ
+        self.paddleBusy.r = true
+
+        -- Рассчитываем угол мяча относительно курка и вектор движения
     
+        local ballPaddleAngle = math.atan2(
+            self.paddleRObject.y+(self.paddleRObject.h/2) - self.ballObject.y, 
+            self.paddleRObject.x+(self.paddleRObject.w/2) - self.ballObject.x) * (180.0 / math.pi)
+
+        local ballMovement = self:getBallDirection()
+
+        print("[R]ANGLE START: " .. ballMovement.angle)
+        print("[R]ANGLE PADDLE: " .. ballPaddleAngle)
+
+        -- Отодвигаем мяч от курка
+        self.ballObject.x = self.ballGhost.x
+        self.ballObject.y = self.ballGhost.y
+
+        -- Рассчитываем вектор отскока
+        if (collisionR.rectSide == "left" or collisionR.rectSide == "right") then
+            ballMovement = self:getBallDirection("x")
+        elseif (collisionR.rectSide == "top" or collisionR.rectSide == "bottom") then
+            ballMovement = self:getBallDirection("y")
+        end
+        
+        print("[R]ANGLE MIDDLE: " .. ballMovement.angle)
+        
+        -- Рассчитываем дополнительное смещение вектора относительно курка
+        local changeAngle = ballPaddleAngle
+
+        print("[R]ANGLE CHANGE: " .. changeAngle)
+        local newAngle = (ballMovement.angle * (1-self.config.anglePower) + changeAngle * self.config.anglePower)
+        if (newAngle < 0 and newAngle >= -90) then
+            newAngle = -100
+            print("[R]FIX-")
+        elseif (newAngle > 0 and newAngle <= 90) then
+            newAngle = 100
+            print("[R]FIX+")
+        end
+        -- Рассчитываем финальный вектор движения мяча
+        local newSpeed = lengthDir(ballMovement.speed, newAngle)
+
+        -- Устанавливаем скорость мяча после отскока
+        self.ballSpeed.x = newSpeed.x
+        self.ballSpeed.y = newSpeed.y
+
+        print("[R]ANGLE END: " .. newAngle)
+
+        -- РАЗБЛОКИРОВКА КУРКА ДЛЯ МНОГОПОТОЧНОСТИ
+        self.paddleBusy.r = false
+
+    elseif (self.paddleBusy.r == false and self.paddleBusy.l == false) then
+
+        self.ballGhost.x = self.ballObject.x
+        self.ballGhost.y = self.ballObject.y
+    
+    end
+    --[[
+
+          Ball movement
+
+      45        90         135
+                 |
+                 |
+      0  ----------------- 180
+                 |
+                 |
+      -45       -90       -135
+
+               
+          Paddle to ball
+
+     45        90         135
+                |
+                |
+    0   ----------------- 180
+                |
+                |
+    -45        -90        -135
+
+    ]] 
 end
 
 function lengthDir(speed, angle)
     return {
-        x = math.cos(angle) * speed,
-        y = math.sin(angle) * speed
+        x = math.cos(angle * math.pi / 180) * speed,
+        y = math.sin(angle * math.pi / 180) * speed
     }
+end
+
+function PongGame:getBallDirection(bounceAxis)
+
+    local newSpeed = {x, y}
+
+    if (bounceAxis ~= nil) then
+        if (bounceAxis == "y") then
+            newSpeed.x = self.ballSpeed.x
+            newSpeed.y = self.ballSpeed.y * -1
+        else
+            newSpeed.x = self.ballSpeed.x * -1
+            newSpeed.y = self.ballSpeed.y
+        end
+    else 
+        newSpeed.x = self.ballSpeed.x
+        newSpeed.y = self.ballSpeed.y
+    end
+
+    local speed = math.sqrt(math.pow(newSpeed.x, 2) + math.pow(newSpeed.y, 2))
+
+    return {
+        angle = math.atan2(newSpeed.y, newSpeed.x) * (180.0 / math.pi),
+        speedX = newSpeed.x,
+        speedY = newSpeed.y,
+        speed = speed
+    }
+
 end
