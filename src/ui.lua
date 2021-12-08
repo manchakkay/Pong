@@ -5,7 +5,7 @@ ui = {
         BLACK =     { r = 0,    g = 0,      b = 0 }, 
         GRAY =      { r = 100,  g = 100,    b = 100 }, 
         WHITE =     { r = 255,  g = 255,    b = 255 }, 
-        ACCENT =    { r = 108,  g = 212,    b = 235 } 
+        ACCENT =    { r = 205,  g = 198,    b = 131 }
     },
     -- Константы со шрифтами
     FONTS = {
@@ -15,7 +15,8 @@ ui = {
         -- Кегль: 48
         EXTRABOLD48 = love.graphics.newFont("assets/fonts/Manrope-ExtraBold.ttf", 48, "light", love.graphics.getDPIScale()),
         -- Кегль: 160
-        LIGHT160 = love.graphics.newFont("assets/fonts/Manrope-Light.ttf", 160, "light", love.graphics.getDPIScale())
+        LIGHT160 = love.graphics.newFont("assets/fonts/Manrope-Light.ttf", 160, "light", love.graphics.getDPIScale()),
+        BOLD160 = love.graphics.newFont("assets/fonts/Manrope-Bold.ttf", 160, "light", love.graphics.getDPIScale()),
     },
 
     
