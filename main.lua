@@ -4,7 +4,7 @@ require "src.ui"
 
 function love.load()
     -- Полноэкранный режим и цвет фона
-    love.window.setFullscreen(true)
+    -- love.window.setFullscreen(true)
     love.graphics.setBackgroundColor(0 / 255, 0 / 255, 0 / 255)
 
     -- Получение размеров окна
@@ -14,13 +14,15 @@ function love.load()
     -- Установка настроек игры
     love.math.setRandomSeed(love.timer.getTime())
     gameConfig = {
-        paddleSpeed = 10,
+        paddleSpeed = 15,
         paddleWidth = 10,
-        paddleHeight = 100,
+        paddleHeight = 150,
 
         ballRadius = 10,
-        ballStartSpeed = 10,
-        ballAcceleration = 0.001
+        ballStartSpeed = 7,
+        ballAcceleration = 0.002,
+
+        anglePower = 0.05
     }
 
     -- Создание инстанции игры
