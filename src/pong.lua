@@ -218,130 +218,74 @@ function PongGame:draw()
         love.graphics.rectangle("fill", self.paddleRObject.x, self.paddleRObject.y, self.paddleRObject.w, self.paddleRObject.h)
 
         -- Счёт игры
-        ui.centerText{
-            rectX = windowWidth / 2, 
-            rectY = 72, 
+        ui.text{
+            x = windowWidth / 2, 
+            y = 72, 
             text = self.scoreL .. " : " .. self.scoreR, 
-            fontName = "EXTRABOLD48", 
-            colorName = "ACCENT"
+            font = "EXTRABOLD48", 
+            color = "ACCENT"
         }
-
-        -- Скорость игры (debug)
-        --[[ ui.centerText{
-            rectX = windowWidth / 2, 
-            rectY = 144, 
-            text = math.floor(math.sqrt(math.pow(self.ballSpeed.x, 2) + math.pow(self.ballSpeed.y, 2))), 
-            fontName = "REGULAR24", 
-            colorName = "GRAY"
-        } ]]
-
-        -- Угол шара (debug)
-        --[[ ui.centerText{
-            rectX = windowWidth / 2, 
-            rectY = 216, 
-            text = math.floor(self:getBallDirection().angle), 
-            fontName = "REGULAR24", 
-            colorName = "GRAY"
-        } ]]
 
     elseif (self.gameMode == "menu") then
         -- -- -- РЕЖИМ МЕНЮ -- -- --
 
         -- Рисуем логотип
-        ui.centerText{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 - 128, 
+        ui.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 - 128, 
             text = "P O N G", 
-            fontName = "BOLD160", 
-            colorName = "ACCENT"
+            font = "BOLD160", 
+            color = "ACCENT"
+        }
+        -- Мета-информация
+        ui.text{
+            x = windowWidth / 2, 
+            y = windowHeight - 64, 
+            text = self.config.metainfo.version_code, 
+            font = "MEDIUM16", 
+            color = "GRAY"
+        }
+        ui.text{
+            x = windowWidth / 2, 
+            y = windowHeight - 96, 
+            text = self.config.metainfo.author, 
+            font = "MEDIUM16", 
+            color = "GRAY"
         }
 
         -- Получаем зоны для нажатия на кнопки
 
         -- Одиночная игра
-        self.buttons["start1P"] = ui.centerTextRect{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 + 64, 
+        self.buttons["start1P"] = ui.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 + 64, 
             text = "Игра с компьютером", 
-            fontName = "BOLD24"
+            font = "BOLD24",
+            colorIdle = "WHITE",
+            colorHover = "GRAY",
+            clickable = true,
         }
-        -- Мультиплеер
-        self.buttons["start2P"] = ui.centerTextRect{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 + 140, 
+        -- -- Мультиплеер
+        self.buttons["start2P"] = ui.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 + 140, 
             text = "Игра с другим игроком", 
-            fontName = "BOLD24"
+            font = "BOLD24",
+            colorIdle = "WHITE",
+            colorHover = "GRAY",
+            clickable = true,
         }
         -- Выход из игры
-        self.buttons["exit"] = ui.centerTextRect{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 + 216, 
+        self.buttons["exit"] = ui.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 + 216, 
             text = "Выйти из игры", 
-            fontName = "BOLD24"
+            font = "BOLD24",
+            colorIdle = "WHITE",
+            colorHover = "GRAY",
+            clickable = true,
         }
 
-        -- Анимация наведения курсора
-
-        -- Одиночная игра
-        if (ui.mouseInsideRect(self.buttons["start1P"])) then
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 64, 
-                text = "Игра с компьютером", 
-                fontName = "BOLD24", 
-                colorName = "GRAY"
-            }
-            ui.cursorRequired = true
-            ui.cursorMode = "hand"
-        else
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 64, 
-                text = "Игра с компьютером", 
-                fontName = "BOLD24", 
-                colorName = "WHITE"
-            }
-        end
-        -- Мультиплеер
-        if (ui.mouseInsideRect(self.buttons["start2P"])) then
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 140, 
-                text = "Игра с другим игроком", 
-                fontName = "BOLD24", 
-                colorName = "GRAY"
-            }
-            ui.cursorRequired = true
-            ui.cursorMode = "hand"
-        else
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 140, 
-                text = "Игра с другим игроком", 
-                fontName = "BOLD24", 
-                colorName = "WHITE"
-            }
-        end
-        -- Выход из игры
-        if (ui.mouseInsideRect(self.buttons["exit"])) then
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 216, 
-                text = "Выйти из игры", 
-                fontName = "BOLD24", 
-                colorName = "GRAY"
-            }
-            ui.cursorRequired = true
-            ui.cursorMode = "hand"
-        else
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 216, 
-                text = "Выйти из игры", 
-                fontName = "BOLD24", 
-                colorName = "WHITE"
-            }
-        end
     elseif (self.gameMode == "end-2P") then
         -- -- -- РЕЖИМ МЕНЮ -- -- --
 
@@ -355,83 +299,45 @@ function PongGame:draw()
             tempText = "PLAYER 2"
         end
 
-        ui.centerText{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 - 256, 
+        ui.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 - 256, 
             text = tempText .. " WINS!", 
-            fontName = "BOLD160", 
-            colorName = "ACCENT"
+            font = "BOLD160", 
+            color = "ACCENT"
         }
 
-        ui.centerText{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 - 108, 
+        ui.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 - 108, 
             text = self.scoreL .. " : " .. self.scoreR, 
-            fontName = "EXTRABOLD48", 
-            colorName = "GRAY"
+            font = "EXTRABOLD48", 
+            color = "GRAY"
         }
 
         -- Получаем зоны для нажатия на кнопки
 
         -- Рестарт
-        self.buttons["start2P"] = ui.centerTextRect{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 + 88, 
+        self.buttons["start2P"] = ui.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 + 88, 
             text = "Начать новую игру", 
-            fontName = "BOLD24"
+            font = "BOLD24",
+            colorIdle = "WHITE",
+            colorHover = "GRAY",
+            clickable = true,
+            
         }
         -- Выход в меню
-        self.buttons["menu"] = ui.centerTextRect{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 + 164, 
+        self.buttons["menu"] = ui.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 + 164, 
             text = "Выйти в главное меню", 
-            fontName = "BOLD24"
+            font = "BOLD24",
+            colorIdle = "WHITE",
+            colorHover = "GRAY",
+            clickable = true,
         }
-
-
-        -- Анимация наведения курсора
-
-        -- Рестарт
-        if (ui.mouseInsideRect(self.buttons["start2P"])) then
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 88, 
-                text = "Начать новую игру", 
-                fontName = "BOLD24",
-                colorName = "GRAY"
-            }
-            ui.cursorRequired = true
-            ui.cursorMode = "hand"
-        else
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 88, 
-                text = "Начать новую игру", 
-                fontName = "BOLD24",
-                colorName = "WHITE"
-            }
-        end
-
-        -- Выход в меню
-        if (ui.mouseInsideRect(self.buttons["menu"])) then
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 164, 
-                text = "Выйти в главное меню", 
-                fontName = "BOLD24",
-                colorName = "GRAY"
-            }
-            ui.cursorRequired = true
-            ui.cursorMode = "hand"
-        else
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 164, 
-                text = "Выйти в главное меню", 
-                fontName = "BOLD24",
-                colorName = "WHITE"
-            }
-        end
     end
 end
 
@@ -476,16 +382,8 @@ function PongGame:checkBoundaries()
 
     if (self.ballObject.x > windowWidth - self.ballObject.r) then 
         self:nextRound("L")
-    --[[     
-        self.ballObject.x = windowWidth - self.ballObject.r
-        self.ballSpeed.x = -1 * self.ballSpeed.x
-     ]]
     elseif self.ballObject.x < self.ballObject.r then 
         self:nextRound("R")
-    --[[     
-        self.ballObject.x = self.ballObject.r
-        self.ballSpeed.x = -1 * self.ballSpeed.x
-     ]]
     end
 
     if (self.ballObject.y > windowHeight - self.ballObject.r) then 
