@@ -1,4 +1,3 @@
-
 ui = {
     -- Константы с цветами
     COLORS = { 
@@ -9,6 +8,8 @@ ui = {
     },
     -- Константы со шрифтами
     FONTS = {
+        -- Кегль: 16
+        MEDIUM16 = love.graphics.newFont("assets/fonts/Manrope-Medium.ttf", 16, "light", love.graphics.getDPIScale()),
         -- Кегль: 24
         REGULAR24 = love.graphics.newFont("assets/fonts/Manrope-Regular.ttf", 24, "light", love.graphics.getDPIScale()),
         BOLD24 = love.graphics.newFont("assets/fonts/Manrope-Bold.ttf", 24, "light", love.graphics.getDPIScale()),
@@ -19,45 +20,34 @@ ui = {
         BOLD160 = love.graphics.newFont("assets/fonts/Manrope-Bold.ttf", 160, "light", love.graphics.getDPIScale()),
     },
 
-    
-    --[[ 
-        Рассчёт размеров центрированного текста
-
-        Аргументы:
-        rectX, rectY, text, fontName
-    ]]
-    centerTextRect = function ( arguments )
-
-        local font = ui.FONTS[arguments.fontName]
-        local textWidth = font:getWidth(arguments.text)
-        local textHeight = font:getHeight()
-
-        return { 
-            x = arguments.rectX-textWidth, 
-            y = arguments.rectY-textHeight, 
-            w = textWidth*2, 
-            h = textHeight*2 
-        }
-
-    end,
-
     --[[ 
         Рисует центрированный текст
 
         Аргументы:
-        rectX, rectY, text, fontName, colorName
+        x, y, text, font, colorIdle, colorHover
     ]]
-    centerText = function( arguments )
+    text = function( arguments )
 
-        local font = ui.FONTS[arguments.fontName]
-        local color = ui.COLORS[arguments.colorName]
+        local font = ui.FONTS[arguments.font]
+        local color;
 
         local textWidth = font:getWidth(arguments.text)
         local textHeight = font:getHeight()
+        local rect = { x = arguments.x - textWidth, y = arguments.y - textHeight, w = textWidth * 2, h = textHeight * 2 }
+
+        if (arguments.clickable == true and ui.mouseInsideRect(rect)) then
+            color = ui.COLORS[arguments.colorHover]
+            ui.cursorRequired = true
+            ui.cursorMode = arguments.cursor or "hand"
+        else
+            color = ui.COLORS[arguments.color or arguments.colorIdle]
+        end
 
         love.graphics.setFont(font)
         love.graphics.setColor(color["r"] / 255, color["g"] / 255, color["b"] / 255)
-        love.graphics.print(arguments.text, arguments.rectX, arguments.rectY, 0, 1, 1, textWidth / 2, textHeight / 2)
+        love.graphics.print(arguments.text, arguments.x, arguments.y, 0, 1, 1, textWidth / 2, textHeight / 2)
+
+        return rect
 
     end,
 
@@ -67,7 +57,7 @@ ui = {
         Аргументы:
         rect = {x,y,w,h}
     ]]
-    mouseInsideRect = function ( rect )
+    mouseInsideRect = function( rect )
 
         local mX = love.mouse.getX()
         local mY = love.mouse.getY()
@@ -77,7 +67,7 @@ ui = {
         end
 
         return false
-        
+
     end,
 
     -- Работа с курсором
@@ -85,11 +75,11 @@ ui = {
     cursorRequired = false,
     cursorMode = "arrow",
 
-    cursorCheck = function ()
+    cursorCheck = function()
         if (ui.cursorRequired) then
-            love.mouse.setCursor( love.mouse.getSystemCursor(ui.cursorMode) )
+            love.mouse.setCursor(love.mouse.getSystemCursor(ui.cursorMode))
         else
-            love.mouse.setCursor( love.mouse.getSystemCursor("arrow") )
+            love.mouse.setCursor(love.mouse.getSystemCursor("arrow"))
         end
     end
 }
