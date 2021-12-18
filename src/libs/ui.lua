@@ -1,10 +1,11 @@
-ui = {
+UI = {
     -- Константы с цветами
     COLORS = { 
         BLACK =     { r = 0,    g = 0,      b = 0 }, 
         GRAY =      { r = 100,  g = 100,    b = 100 }, 
         WHITE =     { r = 255,  g = 255,    b = 255 }, 
-        ACCENT =    { r = 205,  g = 198,    b = 131 }
+        ACCENT =    { r = 205,  g = 198,    b = 131 },
+        RED =       { r = 255,  g = 60,     b = 40 },
     },
     -- Константы со шрифтами
     FONTS = {
@@ -28,19 +29,19 @@ ui = {
     ]]
     text = function( arguments )
 
-        local font = ui.FONTS[arguments.font]
+        local font = UI.FONTS[arguments.font]
         local color;
 
         local textWidth = font:getWidth(arguments.text)
         local textHeight = font:getHeight()
         local rect = { x = arguments.x - textWidth, y = arguments.y - textHeight, w = textWidth * 2, h = textHeight * 2 }
 
-        if (arguments.clickable == true and ui.mouseInsideRect(rect)) then
-            color = ui.COLORS[arguments.colorHover]
-            ui.cursorRequired = true
-            ui.cursorMode = arguments.cursor or "hand"
+        if (arguments.clickable == true and UI.mouseInsideRect(rect)) then
+            color = UI.COLORS[arguments.colorHover]
+            UI.cursorRequired = true
+            UI.cursorMode = arguments.cursor or "hand"
         else
-            color = ui.COLORS[arguments.color or arguments.colorIdle]
+            color = UI.COLORS[arguments.color or arguments.colorIdle]
         end
 
         love.graphics.setFont(font)
@@ -76,8 +77,8 @@ ui = {
     cursorMode = "arrow",
 
     cursorCheck = function()
-        if (ui.cursorRequired) then
-            love.mouse.setCursor(love.mouse.getSystemCursor(ui.cursorMode))
+        if (UI.cursorRequired) then
+            love.mouse.setCursor(love.mouse.getSystemCursor(UI.cursorMode))
         else
             love.mouse.setCursor(love.mouse.getSystemCursor("arrow"))
         end
