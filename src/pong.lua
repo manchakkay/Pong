@@ -26,21 +26,26 @@ function PongGame:create( arguments )
         type = "ball", 
         startX = (windowWidth / 2), 
         startY = (windowHeight / 2), 
-        radius = prototype.config.ballRadius 
+        radius = prototype.config.ballRadius,
     }
     prototype.paddleLObject = CollisionObject:create{
         type = "rect",
         startX = 50,
         startY = (windowHeight / 2) - (prototype.config.paddleHeight / 2),
         width = prototype.config.paddleWidth,
-        height = prototype.config.paddleHeight
+        height = prototype.config.paddleHeight,
     }
     prototype.paddleRObject = CollisionObject:create{
         type = "rect", 
         startX = (windowWidth - prototype.config.paddleWidth) - 50, 
         startY = (windowHeight / 2) - (prototype.config.paddleHeight / 2), 
         width = prototype.config.paddleWidth,                   
-        height = prototype.config.paddleHeight
+        height = prototype.config.paddleHeight,
+    }
+    prototype.ballTracer = Queue2D:create{
+        startX = (windowWidth / 2),
+        startY = (windowHeight / 2),
+        length = prototype.config.enemyDelay,
     }
 
     -- Скорости
@@ -50,7 +55,22 @@ function PongGame:create( arguments )
         l = false, 
         r = false
     }
+    prototype.paddleVelocities = {
+        l = {
+            v = 0,
+            a = 0,
+            active = false
+        },
+        r = {
+            v = 0,
+            a = 0,
+            active = false
+        }
+    }
+
     prototype.paddleSpeed = prototype.config.paddleSpeed
+    prototype.paddleAcceleration = prototype.config.paddleAcceleration
+    prototype.paddleBraking = prototype.config.paddleBraking
 
     -- Настройки игры
     prototype.gameMode = "menu"
@@ -74,7 +94,11 @@ function PongGame:nextRound(winner)
     end
 
     if (self.scoreL >= 9 or self.scoreR >= 9) then
-        self.gameMode = "end-2P"
+        if (self.gameMode == "game-2P") then
+            self.gameMode = "end-2P"
+        elseif (self.gameMode == "game-1P") then
+            self.gameMode = "end-1P"
+        end
     end
 
     -- Установка координат
@@ -104,15 +128,91 @@ function PongGame:update()
         else
             self.ballSpeed.y = self.ballSpeed.y + self.ballSpeed.a  * -1
         end
-        
+
+        self.ballTracer:add(self.ballObject.x, self.ballObject.y)
+
+    end
+
+    if (self.gameMode == "game-1P") then
+        if (self.ballObject.x > windowWidth/2) then
+            local delayed1 = self.ballTracer.queue[self.config.enemyDelay]
+            local delayed2 = self.ballTracer.queue[self.config.enemyDelay-1]
+
+            Log.print("trace", self.ballTracer)
+            local diffY = (delayed2.y - delayed1.y)
+            local predictionY = self.ballTracer.queue[1].y + (self.config.enemyDelay * diffY)
+            Log.print("queue", predictionY)
+
+            if (predictionY > self.paddleRObject.y) then
+                self:move("R", "down")
+            elseif (predictionY < self.paddleRObject.y) then
+                self:move("R", "up")
+            end
+        end
     end
 
     self:checkCollisions()
     self:checkBoundaries()
+    
+    self:braking()
 end
 
 
-function PongGame:move( dt, paddle, direction )
+function PongGame:braking()
+
+    -- Торможение левого
+    if (self.paddleVelocities.l.active == true) then
+        self.paddleVelocities.l.active = false
+    else
+        if (self.paddleVelocities.l.v > 0) then
+            self.paddleVelocities.l.v = self.paddleVelocities.l.v - self.paddleBraking
+
+            if (self.paddleVelocities.l.v < 0) then
+                self.paddleVelocities.l.v = 0
+            end
+        elseif (self.paddleVelocities.l.v < 0) then
+            self.paddleVelocities.l.v = self.paddleVelocities.l.v + self.paddleBraking
+
+            if (self.paddleVelocities.l.v > 0) then
+                self.paddleVelocities.l.v = 0
+            end
+        end
+    end
+
+    -- Торможение правого
+    if (self.paddleVelocities.r.active == true) then
+        self.paddleVelocities.r.active = false
+    else
+        if (self.paddleVelocities.r.v > 0) then
+            self.paddleVelocities.r.v = self.paddleVelocities.r.v - self.paddleBraking
+
+            if (self.paddleVelocities.r.v < 0) then
+                self.paddleVelocities.r.v = 0
+            end
+        elseif (self.paddleVelocities.r.v < 0) then
+            self.paddleVelocities.r.v = self.paddleVelocities.r.v + self.paddleBraking
+
+            if (self.paddleVelocities.r.v > 0) then
+                self.paddleVelocities.r.v = 0
+            end
+        end
+    end
+
+    if (self.paddleVelocities.r.v > self.paddleSpeed) then
+        self.paddleVelocities.r.v = self.paddleSpeed
+    elseif (self.paddleVelocities.r.v < self.paddleSpeed*-1) then
+        self.paddleVelocities.r.v = self.paddleSpeed*-1
+    end
+
+    if (self.paddleVelocities.l.v > self.paddleSpeed) then
+        self.paddleVelocities.l.v = self.paddleSpeed
+    elseif (self.paddleVelocities.l.v < self.paddleSpeed*-1) then
+        self.paddleVelocities.l.v = self.paddleSpeed*-1
+    end
+    
+end
+
+function PongGame:move( paddle, direction )
     --[[ 
 
     Функция движения курков
@@ -123,30 +223,54 @@ function PongGame:move( dt, paddle, direction )
 
     if (paddle == "L") then
         -- Левый курок
+        self.paddleVelocities.l.active = true
 
         if (direction == "up") then
             if (self.paddleLObject.y >= 0) then
-                self.paddleLObject.y = self.paddleLObject.y - self.paddleSpeed
+                self.paddleVelocities.l.a = self.paddleAcceleration * -1
+                self.paddleVelocities.l.v = self.paddleVelocities.l.v + self.paddleVelocities.l.a
+            else
+                self.paddleVelocities.l.v = 0
+                self.paddleVelocities.l.a = 0
             end
         elseif (direction == "down") then
             if (self.paddleLObject.y <= windowHeight - self.config.paddleHeight) then
-                self.paddleLObject.y = self.paddleLObject.y + self.paddleSpeed
+                self.paddleVelocities.l.a = self.paddleAcceleration
+                self.paddleVelocities.l.v = self.paddleVelocities.l.v + self.paddleVelocities.l.a
+            else
+                self.paddleVelocities.l.v = 0
+                self.paddleVelocities.l.a = 0
             end
         end
+
+        self.paddleLObject.y = self.paddleLObject.y + self.paddleVelocities.l.v
+        
     elseif (paddle == "R") then
         -- Правый курок
+        self.paddleVelocities.r.active = true
 
         if (direction == "up") then
             if (self.paddleRObject.y >= 0) then
-                self.paddleRObject.y = self.paddleRObject.y - self.paddleSpeed
+                self.paddleVelocities.r.a = self.paddleAcceleration * -1
+                self.paddleVelocities.r.v = self.paddleVelocities.r.v + self.paddleVelocities.r.a
+            else
+                self.paddleVelocities.r.v = 0
+                self.paddleVelocities.r.a = 0
             end
 
         elseif (direction == "down") then
             if (self.paddleRObject.y <= windowHeight - self.config.paddleHeight) then
-                self.paddleRObject.y = self.paddleRObject.y + self.paddleSpeed
+                self.paddleVelocities.r.a = self.paddleAcceleration
+                self.paddleVelocities.r.v = self.paddleVelocities.r.v + self.paddleVelocities.r.a
+            else
+                self.paddleVelocities.r.v = 0
+                self.paddleVelocities.r.a = 0
             end
         end
+        
+        self.paddleRObject.y = self.paddleRObject.y + self.paddleVelocities.r.v
     end
+
 end
 
 -- Триггер нажатия клавиши мыши
@@ -154,17 +278,19 @@ function PongGame:mouseClick()
     if (self.gameMode == "menu") then
         -- -- -- РЕЖИМ МЕНЮ -- -- --
         
-        if (ui.mouseInsideRect(self.buttons["start1P"])) then
+        if (UI.mouseInsideRect(self.buttons["start1P"])) then
             -- Кнопка: Игра с компьютером
             self.gameMode = "game-1P"
 
-        elseif (ui.mouseInsideRect(self.buttons["start2P"])) then
+            self:nextRound()
+
+        elseif (UI.mouseInsideRect(self.buttons["start2P"])) then
             -- Кнопка: Игра с другим игроком
             self.gameMode = "game-2P"
 
             self:nextRound()
 
-        elseif (ui.mouseInsideRect(self.buttons["exit"])) then
+        elseif (UI.mouseInsideRect(self.buttons["exit"])) then
             -- Кнопка: Выйти из игры
             love.event.quit()
 
@@ -172,7 +298,7 @@ function PongGame:mouseClick()
     elseif (self.gameMode == "end-2P") then
         -- -- -- РЕЖИМ ОКОНЧАНИЮ ИГРЫ 1 на 1 -- -- --
         
-        if (ui.mouseInsideRect(self.buttons["menu"])) then
+        if (UI.mouseInsideRect(self.buttons["menu"])) then
             -- Кнопка: Выход в меню
 
             self.scoreL = 0
@@ -184,7 +310,7 @@ function PongGame:mouseClick()
 
             self.gameMode = "menu"
 
-        elseif (ui.mouseInsideRect(self.buttons["start2P"])) then
+        elseif (UI.mouseInsideRect(self.buttons["start2P"])) then
             -- Кнопка: Рестарт
 
             self.scoreL = 0
@@ -198,6 +324,35 @@ function PongGame:mouseClick()
 
             
         end
+    elseif (self.gameMode == "end-1P") then
+        -- -- -- РЕЖИМ ОКОНЧАНИЮ ИГРЫ 1 на 1 -- -- --
+        
+        if (UI.mouseInsideRect(self.buttons["menu"])) then
+            -- Кнопка: Выход в меню
+
+            self.scoreL = 0
+            self.scoreR = 0
+            self.paddleLObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+            self.paddleRObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+
+            self:nextRound()
+
+            self.gameMode = "menu"
+
+        elseif (UI.mouseInsideRect(self.buttons["start1P"])) then
+            -- Кнопка: Рестарт
+
+            self.scoreL = 0
+            self.scoreR = 0
+            self.paddleLObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+            self.paddleRObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+
+            self:nextRound()
+
+            self.gameMode = "game-1P"
+
+            
+        end
     end
 end
 
@@ -206,6 +361,7 @@ function PongGame:draw()
     -- Отрисовка
 
     if (self.gameMode == "game-2P") then
+
         -- -- -- РЕЖИМ МУЛЬТИПЛЕЕРА -- -- --
 
         -- Рисуем мяч
@@ -213,135 +369,103 @@ function PongGame:draw()
         love.graphics.circle("fill", self.ballObject.x, self.ballObject.y, self.ballObject.r)
 
         -- Рисуем игроков
-        love.graphics.setColor(160 / 255, 160 / 255, 160 / 255)
+        love.graphics.setColor(255 / 255, 255 / 255, 255 / 255)
         love.graphics.rectangle("fill", self.paddleLObject.x, self.paddleLObject.y, self.paddleLObject.w, self.paddleLObject.h)
         love.graphics.rectangle("fill", self.paddleRObject.x, self.paddleRObject.y, self.paddleRObject.w, self.paddleRObject.h)
 
         -- Счёт игры
-        ui.centerText{
-            rectX = windowWidth / 2, 
-            rectY = 72, 
+        UI.text{
+            x = windowWidth / 2, 
+            y = 72, 
             text = self.scoreL .. " : " .. self.scoreR, 
-            fontName = "EXTRABOLD48", 
-            colorName = "ACCENT"
+            font = "EXTRABOLD48", 
+            color = "ACCENT"
         }
+        
+    elseif (self.gameMode == "game-1P") then
 
-        -- Скорость игры (debug)
-        --[[ ui.centerText{
-            rectX = windowWidth / 2, 
-            rectY = 144, 
-            text = math.floor(math.sqrt(math.pow(self.ballSpeed.x, 2) + math.pow(self.ballSpeed.y, 2))), 
-            fontName = "REGULAR24", 
-            colorName = "GRAY"
-        } ]]
+        -- -- -- РЕЖИМ ОДИНОЧНЫЙ ИГРЫ -- -- --
 
-        -- Угол шара (debug)
-        --[[ ui.centerText{
-            rectX = windowWidth / 2, 
-            rectY = 216, 
-            text = math.floor(self:getBallDirection().angle), 
-            fontName = "REGULAR24", 
-            colorName = "GRAY"
-        } ]]
+        -- Рисуем мяч
+        love.graphics.setColor(255 / 255, 255 / 255, 255 / 255)
+        love.graphics.circle("fill", self.ballObject.x, self.ballObject.y, self.ballObject.r)
+
+        -- Рисуем игроков
+        love.graphics.setColor(255 / 255, 255 / 255, 255 / 255)
+        love.graphics.rectangle("fill", self.paddleLObject.x, self.paddleLObject.y, self.paddleLObject.w, self.paddleLObject.h)
+        love.graphics.setColor(255 / 255, 60 / 255, 40 / 255)
+        love.graphics.rectangle("fill", self.paddleRObject.x, self.paddleRObject.y, self.paddleRObject.w, self.paddleRObject.h)
+
+        -- Счёт игры
+        UI.text{
+            x = windowWidth / 2, 
+            y = 72, 
+            text = self.scoreL .. " : " .. self.scoreR, 
+            font = "EXTRABOLD48", 
+            color = "ACCENT"
+        }
 
     elseif (self.gameMode == "menu") then
         -- -- -- РЕЖИМ МЕНЮ -- -- --
 
         -- Рисуем логотип
-        ui.centerText{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 - 128, 
+        UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 - 128, 
             text = "P O N G", 
-            fontName = "BOLD160", 
-            colorName = "ACCENT"
+            font = "BOLD160", 
+            color = "ACCENT"
+        }
+        -- Мета-информация
+        UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight - 64, 
+            text = self.config.metainfo.version_code, 
+            font = "MEDIUM16", 
+            color = "GRAY"
+        }
+        UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight - 96, 
+            text = self.config.metainfo.author, 
+            font = "MEDIUM16", 
+            color = "GRAY"
         }
 
         -- Получаем зоны для нажатия на кнопки
 
         -- Одиночная игра
-        self.buttons["start1P"] = ui.centerTextRect{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 + 64, 
+        self.buttons["start1P"] = UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 + 64, 
             text = "Игра с компьютером", 
-            fontName = "BOLD24"
+            font = "BOLD24",
+            colorIdle = "WHITE",
+            colorHover = "GRAY",
+            clickable = true,
         }
-        -- Мультиплеер
-        self.buttons["start2P"] = ui.centerTextRect{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 + 140, 
+        -- -- Мультиплеер
+        self.buttons["start2P"] = UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 + 140, 
             text = "Игра с другим игроком", 
-            fontName = "BOLD24"
+            font = "BOLD24",
+            colorIdle = "WHITE",
+            colorHover = "GRAY",
+            clickable = true,
         }
         -- Выход из игры
-        self.buttons["exit"] = ui.centerTextRect{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 + 216, 
+        self.buttons["exit"] = UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 + 216, 
             text = "Выйти из игры", 
-            fontName = "BOLD24"
+            font = "BOLD24",
+            colorIdle = "WHITE",
+            colorHover = "GRAY",
+            clickable = true,
         }
+        
 
-        -- Анимация наведения курсора
-
-        -- Одиночная игра
-        if (ui.mouseInsideRect(self.buttons["start1P"])) then
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 64, 
-                text = "Игра с компьютером", 
-                fontName = "BOLD24", 
-                colorName = "GRAY"
-            }
-            ui.cursorRequired = true
-            ui.cursorMode = "hand"
-        else
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 64, 
-                text = "Игра с компьютером", 
-                fontName = "BOLD24", 
-                colorName = "WHITE"
-            }
-        end
-        -- Мультиплеер
-        if (ui.mouseInsideRect(self.buttons["start2P"])) then
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 140, 
-                text = "Игра с другим игроком", 
-                fontName = "BOLD24", 
-                colorName = "GRAY"
-            }
-            ui.cursorRequired = true
-            ui.cursorMode = "hand"
-        else
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 140, 
-                text = "Игра с другим игроком", 
-                fontName = "BOLD24", 
-                colorName = "WHITE"
-            }
-        end
-        -- Выход из игры
-        if (ui.mouseInsideRect(self.buttons["exit"])) then
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 216, 
-                text = "Выйти из игры", 
-                fontName = "BOLD24", 
-                colorName = "GRAY"
-            }
-            ui.cursorRequired = true
-            ui.cursorMode = "hand"
-        else
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 216, 
-                text = "Выйти из игры", 
-                fontName = "BOLD24", 
-                colorName = "WHITE"
-            }
-        end
     elseif (self.gameMode == "end-2P") then
         -- -- -- РЕЖИМ МЕНЮ -- -- --
 
@@ -355,118 +479,163 @@ function PongGame:draw()
             tempText = "PLAYER 2"
         end
 
-        ui.centerText{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 - 256, 
+        UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 - 256, 
             text = tempText .. " WINS!", 
-            fontName = "BOLD160", 
-            colorName = "ACCENT"
+            font = "BOLD160", 
+            color = "ACCENT"
         }
 
-        ui.centerText{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 - 108, 
+        UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 - 108, 
             text = self.scoreL .. " : " .. self.scoreR, 
-            fontName = "EXTRABOLD48", 
-            colorName = "GRAY"
+            font = "EXTRABOLD48", 
+            color = "GRAY"
         }
 
         -- Получаем зоны для нажатия на кнопки
 
         -- Рестарт
-        self.buttons["start2P"] = ui.centerTextRect{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 + 88, 
+        self.buttons["start2P"] = UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 + 88, 
             text = "Начать новую игру", 
-            fontName = "BOLD24"
+            font = "BOLD24",
+            colorIdle = "WHITE",
+            colorHover = "GRAY",
+            clickable = true,
+            
         }
         -- Выход в меню
-        self.buttons["menu"] = ui.centerTextRect{
-            rectX = windowWidth / 2, 
-            rectY = windowHeight / 2 + 164, 
+        self.buttons["menu"] = UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 + 164, 
             text = "Выйти в главное меню", 
-            fontName = "BOLD24"
+            font = "BOLD24",
+            colorIdle = "WHITE",
+            colorHover = "GRAY",
+            clickable = true,
+        }
+    
+    elseif (self.gameMode == "end-1P") then
+        -- -- -- РЕЖИМ МЕНЮ -- -- --
+
+
+        -- Выводим победителя
+        local tempText, tempColor
+
+        if (self.scoreL > self.scoreR) then
+            tempText = "PLAYER" 
+            tempColor = "ACCENT"
+        else
+            tempText = "COMPUTER"
+            tempColor = "RED"
+        end
+
+        UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 - 256, 
+            text = tempText .. " WINS!", 
+            font = "BOLD160", 
+            color = tempColor
         }
 
+        UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 - 108, 
+            text = self.scoreL .. " : " .. self.scoreR, 
+            font = "EXTRABOLD48", 
+            color = "GRAY"
+        }
 
-        -- Анимация наведения курсора
+        -- Получаем зоны для нажатия на кнопки
 
         -- Рестарт
-        if (ui.mouseInsideRect(self.buttons["start2P"])) then
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 88, 
-                text = "Начать новую игру", 
-                fontName = "BOLD24",
-                colorName = "GRAY"
-            }
-            ui.cursorRequired = true
-            ui.cursorMode = "hand"
-        else
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 88, 
-                text = "Начать новую игру", 
-                fontName = "BOLD24",
-                colorName = "WHITE"
-            }
-        end
-
+        self.buttons["start1P"] = UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 + 88, 
+            text = "Начать новую игру", 
+            font = "BOLD24",
+            colorIdle = "WHITE",
+            colorHover = "GRAY",
+            clickable = true,
+            
+        }
         -- Выход в меню
-        if (ui.mouseInsideRect(self.buttons["menu"])) then
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 164, 
-                text = "Выйти в главное меню", 
-                fontName = "BOLD24",
-                colorName = "GRAY"
-            }
-            ui.cursorRequired = true
-            ui.cursorMode = "hand"
-        else
-            ui.centerText{
-                rectX = windowWidth / 2, 
-                rectY = windowHeight / 2 + 164, 
-                text = "Выйти в главное меню", 
-                fontName = "BOLD24",
-                colorName = "WHITE"
-            }
-        end
+        self.buttons["menu"] = UI.text{
+            x = windowWidth / 2, 
+            y = windowHeight / 2 + 164, 
+            text = "Выйти в главное меню", 
+            font = "BOLD24",
+            colorIdle = "WHITE",
+            colorHover = "GRAY",
+            clickable = true,
+        }
+    
+    
     end
 end
 
 
-function PongGame:keyCheck( dt )
+function PongGame:keyCheck()
     -- Проверка зажатия кнопки на клавиатуре
     
     if (self.gameMode == "game-1P") then
         -- Одиночная игра
         
+        if (love.keyboard.isDown("escape")) then
+            -- Выйти в меню
+
+            self.scoreL = 0
+            self.scoreR = 0
+            self.paddleLObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+            self.paddleRObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+
+            self:nextRound()
+
+            self.gameMode = "menu"
+        end
+
         if (love.keyboard.isDown("w") or love.keyboard.isDown("up")) then
             -- Вверх
-            self:move(dt, "L", "up")
+            self:move("L", "up")
         elseif (love.keyboard.isDown("s") or love.keyboard.isDown("down")) then
             -- Вниз
-            self:move(dt, "L", "down")
+            self:move("L", "down")
         end
 
     elseif (self.gameMode == "game-2P") then
         -- Мультиплеер
 
+        if (love.keyboard.isDown("escape")) then
+            -- Выйти в меню
+
+            self.scoreL = 0
+            self.scoreR = 0
+            self.paddleLObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+            self.paddleRObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+
+            self:nextRound()
+
+            self.gameMode = "menu"
+        end
+
         if (love.keyboard.isDown("w")) then
             -- Вверх Левый
-            self:move(dt, "L", "up")
+            self:move("L", "up")
         elseif (love.keyboard.isDown("s")) then
             -- Вниз Левый
-            self:move(dt, "L", "down")
+            self:move("L", "down")
         end
 
         if (love.keyboard.isDown("up") or love.keyboard.isDown("pageup")) then
             -- Вверх Правый
-            self:move(dt, "R", "up")
+            self:move("R", "up")
         elseif (love.keyboard.isDown("down") or love.keyboard.isDown("pagedown")) then
             -- Вниз Правый
-            self:move(dt, "R", "down")
+            self:move("R", "down")
         end
     end
 end
@@ -476,16 +645,8 @@ function PongGame:checkBoundaries()
 
     if (self.ballObject.x > windowWidth - self.ballObject.r) then 
         self:nextRound("L")
-    --[[     
-        self.ballObject.x = windowWidth - self.ballObject.r
-        self.ballSpeed.x = -1 * self.ballSpeed.x
-     ]]
     elseif self.ballObject.x < self.ballObject.r then 
         self:nextRound("R")
-    --[[     
-        self.ballObject.x = self.ballObject.r
-        self.ballSpeed.x = -1 * self.ballSpeed.x
-     ]]
     end
 
     if (self.ballObject.y > windowHeight - self.ballObject.r) then 
@@ -520,8 +681,8 @@ function PongGame:checkCollisions()
 
         local ballMovement = self:getBallDirection()
 
-        print("[L]ANGLE START: " .. ballMovement.angle)
-        print("[L]ANGLE PADDLE: " .. ballPaddleAngle)
+        Log.print("bouncing", "[L]ANGLE START: " .. ballMovement.angle)
+        Log.print("bouncing", "[L]ANGLE PADDLE: " .. ballPaddleAngle)
 
         -- Отодвигаем мяч от курка
         self.ballObject.x = self.ballGhost.x
@@ -534,18 +695,18 @@ function PongGame:checkCollisions()
             ballMovement = self:getBallDirection("y")
         end
         
-        print("[L]ANGLE MIDDLE: " .. ballMovement.angle)
+        Log.print("bouncing", "[L]ANGLE MIDDLE: " .. ballMovement.angle)
 
         local changeAngle = -1 * (ballPaddleAngle/ballPaddleAngle) * (math.abs( ballPaddleAngle ) - 180);
         local newAngle = (ballMovement.angle * (1-self.config.anglePower) + changeAngle * self.config.anglePower)
         
-        print("[R]ANGLE CHANGE: " .. changeAngle)
+        Log.print("bouncing", "[R]ANGLE CHANGE: " .. tostring(changeAngle))
         if (newAngle < -90 and newAngle >= -180) then
             newAngle = -80
-            print("[L]FIX-")
+            Log.print("bouncing", "[L]FIX-")
         elseif (newAngle > 90 and newAngle <= 180) then
             newAngle = 80
-            print("[L]FIX+")
+            Log.print("bouncing", "[L]FIX+")
         end
         -- Рассчитываем финальный вектор движения мяча
         local newSpeed = lengthDir(ballMovement.speed, newAngle)
@@ -554,7 +715,7 @@ function PongGame:checkCollisions()
         self.ballSpeed.x = newSpeed.x
         self.ballSpeed.y = newSpeed.y
 
-        print("[L]ANGLE END: " .. newAngle)
+        Log.print("bouncing", "[L]ANGLE END: " .. newAngle)
 
         -- РАЗБЛОКИРОВКА КУРКА ДЛЯ МНОГОПОТОЧНОСТИ
         self.paddleBusy.l = false
@@ -572,8 +733,8 @@ function PongGame:checkCollisions()
 
         local ballMovement = self:getBallDirection()
 
-        print("[R]ANGLE START: " .. ballMovement.angle)
-        print("[R]ANGLE PADDLE: " .. ballPaddleAngle)
+        Log.print("bouncing", "[R]ANGLE START: " .. ballMovement.angle)
+        Log.print("bouncing", "[R]ANGLE PADDLE: " .. ballPaddleAngle)
 
         -- Отодвигаем мяч от курка
         self.ballObject.x = self.ballGhost.x
@@ -586,19 +747,19 @@ function PongGame:checkCollisions()
             ballMovement = self:getBallDirection("y")
         end
         
-        print("[R]ANGLE MIDDLE: " .. ballMovement.angle)
+        Log.print("bouncing", "[R]ANGLE MIDDLE: " .. ballMovement.angle)
         
         -- Рассчитываем дополнительное смещение вектора относительно курка
         local changeAngle = ballPaddleAngle
 
-        print("[R]ANGLE CHANGE: " .. changeAngle)
+        Log.print("bouncing", "[R]ANGLE CHANGE: " .. changeAngle)
         local newAngle = (ballMovement.angle * (1-self.config.anglePower) + changeAngle * self.config.anglePower)
         if (newAngle < 0 and newAngle >= -90) then
             newAngle = -100
-            print("[R]FIX-")
+            Log.print("bouncing", "[R]FIX-")
         elseif (newAngle > 0 and newAngle <= 90) then
             newAngle = 100
-            print("[R]FIX+")
+            Log.print("bouncing", "[R]FIX+")
         end
         -- Рассчитываем финальный вектор движения мяча
         local newSpeed = lengthDir(ballMovement.speed, newAngle)
@@ -607,7 +768,7 @@ function PongGame:checkCollisions()
         self.ballSpeed.x = newSpeed.x
         self.ballSpeed.y = newSpeed.y
 
-        print("[R]ANGLE END: " .. newAngle)
+        Log.print("bouncing", "[R]ANGLE END: " .. newAngle)
 
         -- РАЗБЛОКИРОВКА КУРКА ДЛЯ МНОГОПОТОЧНОСТИ
         self.paddleBusy.r = false
@@ -644,13 +805,6 @@ function PongGame:checkCollisions()
     ]] 
 end
 
-function lengthDir(speed, angle)
-    return {
-        x = math.cos(angle * math.pi / 180) * speed,
-        y = math.sin(angle * math.pi / 180) * speed
-    }
-end
-
 function PongGame:getBallDirection(bounceAxis)
 
     local newSpeed = {x, y}
@@ -678,3 +832,12 @@ function PongGame:getBallDirection(bounceAxis)
     }
 
 end
+
+function lengthDir(speed, angle)
+    return {
+        x = math.cos(angle * math.pi / 180) * speed,
+        y = math.sin(angle * math.pi / 180) * speed
+    }
+end
+
+
