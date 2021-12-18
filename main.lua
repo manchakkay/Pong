@@ -1,6 +1,39 @@
+-- Библиотеки
+require "src.libs.logger"
+require "src.libs.ui"
+require "src.libs.queue"
+-- Игровые файлы
 require "src.collision"
 require "src.pong"
-require "src.ui"
+
+-- Настройки отладчика
+loggerConfig = {
+    bouncing =  false,
+    trace =     false,
+    queue =     false,
+}
+
+-- Настройки игры
+gameConfig = {
+    metainfo = {
+        version_code = "0.1 RC",
+        author = "Manchakkay Maxim"
+    },
+
+    paddleSpeed = 15,
+    paddleAcceleration = 1.5,
+    paddleBraking = 1.5,
+    paddleWidth = 10,
+    paddleHeight = 150,
+
+    ballRadius = 14,
+    ballStartSpeed = 10,
+    ballAcceleration = 0.0025,
+
+    anglePower = 0.075,
+
+    enemyDelay = 5,
+}
 
 function love.load()
     -- Полноэкранный режим и цвет фона
@@ -13,22 +46,6 @@ function love.load()
 
     -- Установка настроек игры
     love.math.setRandomSeed(love.timer.getTime())
-    gameConfig = {
-        metainfo = {
-            version_code = "0.1 RC",
-            author = "Manchakkay Maxim"
-        },
-
-        paddleSpeed = 15,
-        paddleWidth = 10,
-        paddleHeight = 150,
-
-        ballRadius = 14,
-        ballStartSpeed = 10,
-        ballAcceleration = 0.0025,
-
-        anglePower = 0.075
-    }
 
     -- Создание инстанции игры
     game = PongGame:create{
@@ -37,14 +54,14 @@ function love.load()
 end
 
 function love.draw()
-    ui.cursorRequired = false
+    UI.cursorRequired = false
     game:draw() 
-    ui.cursorCheck()
+    UI.cursorCheck()
 end
 
-function love.update( dt ) 
-    game:keyCheck(dt)
-    game:update(dt)
+function love.update() 
+    game:keyCheck()
+    game:update()
 end
 
 function love.mousepressed( x, y, button )
