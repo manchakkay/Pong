@@ -244,6 +244,7 @@ function PongGame:move( paddle, direction )
         end
 
         self.paddleLObject.y = self.paddleLObject.y + self.paddleVelocities.l.v
+        
     elseif (paddle == "R") then
         -- Правый курок
         self.paddleVelocities.r.active = true
@@ -584,6 +585,19 @@ function PongGame:keyCheck()
     if (self.gameMode == "game-1P") then
         -- Одиночная игра
         
+        if (love.keyboard.isDown("escape")) then
+            -- Выйти в меню
+
+            self.scoreL = 0
+            self.scoreR = 0
+            self.paddleLObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+            self.paddleRObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+
+            self:nextRound()
+
+            self.gameMode = "menu"
+        end
+
         if (love.keyboard.isDown("w") or love.keyboard.isDown("up")) then
             -- Вверх
             self:move("L", "up")
@@ -594,6 +608,19 @@ function PongGame:keyCheck()
 
     elseif (self.gameMode == "game-2P") then
         -- Мультиплеер
+
+        if (love.keyboard.isDown("escape")) then
+            -- Выйти в меню
+
+            self.scoreL = 0
+            self.scoreR = 0
+            self.paddleLObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+            self.paddleRObject.y = (windowHeight / 2) - (self.config.paddleHeight / 2)
+
+            self:nextRound()
+
+            self.gameMode = "menu"
+        end
 
         if (love.keyboard.isDown("w")) then
             -- Вверх Левый
