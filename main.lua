@@ -16,7 +16,7 @@ loggerConfig = {
 -- Настройки игры
 gameConfig = {
     metainfo = {
-        version_code = "0.1 RC",
+        version_code = "0.2 RC",
         author = "Manchakkay Maxim"
     },
 
